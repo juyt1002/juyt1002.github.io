@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Narrative Visualization</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+</head>
+
+<body style="text-align: center" onload="loadScene(1)">
+    <p style="font-size: 28px; text-align: left; margin-left: 10px";>COVID-19 Timeline and Events</p>
+    <p style="font-size: 12px; text-align: left; margin-left: 10px";>Reference:</p>
+    <p style="font-size: 12px; text-align: left; margin-left: 10px";>Data from https://github.com/CSSEGISandData/COVID-19</p>
+    <p style="font-size: 12px; text-align: left; margin-left: 10px";>Timeline from https://www.cdc.gov/museum/timeline/covid19.html
+         and https://www.who.int/emergencies/diseases/novel-coronavirus-2019/interactive-timeline</p>
+    <div style="width: 1600px; height: 30px; margin-top: 10px; text-align: left;">
+        <button id="b1" style="color:linen; background-color:mediumseagreen; border-color:mediumseagreen; width: 80px; height: 30px; margin-left: 10px; margin-right: 5px;"
+            onclick="loadScene(1)">2020</button>
+        <button id="b2" style="color:linen; background-color:grey; border-color:grey; width: 80px; height: 30px; margin-left: 5px; margin-right: 5px;"
+            onclick="loadScene(2)">2021</button>
+        <button id="b3" style="color:linen; background-color:grey; border-color:grey; width: 80px; height: 30px; margin-left: 5px; margin-right: 10px;"
+            onclick="loadScene(3)">2022</button>
+    </div>
+    <div id="tooltip" style="opacity: 0; position: absolute; text-align: left; width: 300px; height: 50px; background: white; border: 0px; pointer-events: none;"></div>
+    <svg width="1600" height="800"></svg>
+    <script>
+        var current_scene = 0;
+        const margin = 100;
+        const width = d3.select("svg").attr("width");
+        const height = d3.select("svg").attr("height");
+        var xScale, yScale_left, yScale_right, annotation, annotation_s;
+
+        async function main_chart(){
+            d3.csv("Data_vs_Date.csv").then(data => {
+                data.forEach(d => {
+                    d.Date = new Date (d.Date);
+                    d.New_Cases_Smooth = parseInt(d.New_Cases_Smooth);
+                    d.New_Death_Smooth = parseInt(d.New_Death_Smooth);
+                })
+                //data.sort(function(a,b){return new Date(a.Date) - new Date(b.Date);})
+                
+                yScale_left = d3.scaleLinear().domain(d3.extent(data.map(d => d.New_Cases_Smooth)))
+                    .range([height-2*margin,0]);
+                yScale_right = d3.scaleLinear().domain(d3.extent([0,45000]))
+                    .range([height-2*margin,0]);
+
+                if (current_scene == 1){
+                    data = data.filter(d => d.Date <= new Date ("2020-12-31"));
+                    xScale = d3.scaleTime().domain([new Date ("2020-01-01"), new Date ("2020-12-31")]).range([0,width-2*margin]);
+                    
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c1").attr("cx",xScale(new Date("2020-01-07")))
+                        .attr("cy",yScale_right(0)).attr("r",10).attr("fill","orange");  
+                    annotation = "01-07-2020, Chinese authorities identify and, isolate a novel coronavirus as the, causative agent of the outbreak"; 
+                    annotation_s = annotation.split(", ");
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("text").attr("x",50).attr("y",400).selectAll("tspan").data(annotation_s).enter().append("tspan")
+                        .attr("x",50).attr("dy","1em").text(function(d){return d;});
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 50 465 L "+xScale(new Date("2020-01-07"))+" "+yScale_right(0)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("pointer-events","none");
+                    d3.select("#c1").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Cases (7-Day-Avg): No enough data<br>New Death (7-Day-Avg): No enough data");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c2").attr("cx",xScale(new Date("2020-03-11")))
+                        .attr("cy",yScale_right(195)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(100).style("opacity",1);
+                    annotation = "03-11-2020, The World Health Organization declares COVID-19 a pandemic"; 
+                    annotation_s = annotation.split(", ");
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("text").attr("x",300).attr("y",320).selectAll("tspan").data(annotation_s).enter().append("tspan")
+                        .attr("x",300).attr("dy","1em").text(function(d){return d;}).style("opacity",0)
+                        .transition().duration(300).delay(100).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 300 355 L "+xScale(new Date("2020-03-11"))+" "+yScale_right(195)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(100).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c2").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Cases (7-Day-Avg): 4,458<br>New Death (7-Day-Avg): 195");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c3").attr("cx",xScale(new Date("2020-11-13")))
+                        .attr("cy",yScale_right(8741)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(1600).style("opacity",1);
+                    annotation = "11-13-2020, Increased outbreaks are reported, across the country due to, large gatherings for Halloween"; 
+                    annotation_s = annotation.split(", ");
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("text").attr("x",900).attr("y",400).selectAll("tspan").data(annotation_s).enter().append("tspan")
+                        .attr("x",900).attr("dy","1em").text(function(d){return d;}).style("opacity",0)
+                        .transition().duration(300).delay(1600).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 1100 455 L "+xScale(new Date("2020-11-13"))+" "+yScale_right(8741)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(1600).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c3").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Death (7-Day-Avg): 8,741");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c3_2").attr("cx",xScale(new Date("2020-11-13")))
+                        .attr("cy",yScale_left(584260)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(1600).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 1100 455 L "+xScale(new Date("2020-11-13"))+" "+yScale_left(584260)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(1600).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c3_2").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Cases (7-Day-Avg): 584,260");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+        
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c4").attr("cx",xScale(new Date("2020-12-30")))
+                        .attr("cy",yScale_right(10899)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(1900).style("opacity",1);
+                    annotation = "12-30-2020, First U.S. case of UK variant, reported in the U.S.in Colorado"; 
+                    annotation_s = annotation.split(", ");
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("text").attr("x",1150).attr("y",200).selectAll("tspan").data(annotation_s).enter().append("tspan")
+                        .attr("x",1150).attr("dy","1em").text(function(d){return d;}).style("opacity",0)
+                        .transition().duration(300).delay(1900).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 1350 255 L "+xScale(new Date("2020-12-30"))+" "+yScale_right(10899)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(1900).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c4").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Death (7-Day-Avg): 10,899");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+                    
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c4_2").attr("cx",xScale(new Date("2020-12-30")))
+                        .attr("cy",yScale_left(575521)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(1900).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 1350 255 L "+xScale(new Date("2020-12-30"))+" "+yScale_left(575521)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(1900).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c4_2").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Cases (7-Day-Avg): 575,521");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+                }
+                else if (current_scene == 2){
+                    data = data.filter(d => d.Date >= new Date("2021-01-01") && d.Date <= new Date ("2021-12-31"));
+                    xScale = d3.scaleTime().domain([new Date ("2021-01-01"), new Date ("2021-12-31")]).range([0,width-2*margin]);
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c5").attr("cx",xScale(new Date("2021-01-25")))
+                        .attr("cy",yScale_right(14522)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(15).style("opacity",1);
+                    annotation = "01-25-2021, First U.S. case of Brazil variant, of coronavirus reported in Minnesota"; 
+                    annotation_s = annotation.split(", ");
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("text").attr("x",50).attr("y",100).selectAll("tspan").data(annotation_s).enter().append("tspan")
+                        .attr("x",50).attr("dy","1em").text(function(d){return d;}).style("opacity",0)
+                        .transition().duration(300).delay(15).style("opacity",1);
+                    /*d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 95 155 L "+xScale(new Date("2021-01-25"))+" "+yScale_right(14522)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(15).style("opacity",1)
+                        .style("pointer-events","none");*/
+                    d3.select("#c5").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Death (7-Day-Avg): 14,522");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c5_2").attr("cx",xScale(new Date("2021-01-25")))
+                        .attr("cy",yScale_left(590426)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(15).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 95 155 L "+xScale(new Date("2021-01-25"))+" "+yScale_left(590426)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(15).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c5_2").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Cases (7-Day-Avg): 590,426");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c6").attr("cx",xScale(new Date("2021-03-13")))
+                        .attr("cy",yScale_right(8937)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(300).style("opacity",1);
+                    annotation = "03-13-2021, U.S. surpasses 100 million, vaccinations administered"; 
+                    annotation_s = annotation.split(", ");
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("text").attr("x",250).attr("y",300).selectAll("tspan").data(annotation_s).enter().append("tspan")
+                        .attr("x",250).attr("dy","1em").text(function(d){return d;}).style("opacity",0)
+                        .transition().duration(300).delay(300).style("opacity",1);
+                    /*d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 275 357 L "+xScale(new Date("2021-03-13"))+" "+yScale_right(8937)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(300).style("opacity",1)
+                        .style("pointer-events","none");*/
+                    d3.select("#c6").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Death (7-Day-Avg): 8,937");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c6_2").attr("cx",xScale(new Date("2021-03-13")))
+                        .attr("cy",yScale_left(426723)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(300).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 275 357 L "+xScale(new Date("2021-03-13"))+" "+yScale_left(426723)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(300).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c6_2").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Cases (7-Day-Avg): 426,723");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c7").attr("cx",xScale(new Date("2021-06-01")))
+                        .attr("cy",yScale_right(11532)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(700).style("opacity",1);
+                    annotation = "06-01-2021, The Delta variant becomes the, dominant variant in the U.S."; 
+                    annotation_s = annotation.split(", ");
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("text").attr("x",500).attr("y",200).selectAll("tspan").data(annotation_s).enter().append("tspan")
+                        .attr("x",500).attr("dy","1em").text(function(d){return d;}).style("opacity",0)
+                        .transition().duration(300).delay(700).style("opacity",1);
+                    /*d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 583 257 L "+xScale(new Date("2021-06-01"))+" "+yScale_right(11532)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(700).style("opacity",1)
+                        .style("pointer-events","none");*/
+                    d3.select("#c7").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Death (7-Day-Avg): 11,532");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c7_2").attr("cx",xScale(new Date("2021-06-01")))
+                        .attr("cy",yScale_left(476449)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(700).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 583 257 L "+xScale(new Date("2021-06-01"))+" "+yScale_left(476449)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(700).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c7_2").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Cases (7-Day-Avg): 476,449");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c8").attr("cx",xScale(new Date("2021-10-21")))
+                        .attr("cy",yScale_right(6814)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(1450).style("opacity",1);
+                    annotation = "10-21-2021, CDC endorses ACIP recommendation for COVID-19 booster shots, for people who are 65 years and older\,, and people 18 years and older who live in long-term care settings\,, have underlying medical conditions\,, and who live or work in high risk settings"; 
+                    annotation_s = annotation.split(", ");
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("text").attr("x",700).attr("y",300).selectAll("tspan").data(annotation_s).enter().append("tspan")
+                        .attr("x",700).attr("dy","1em").text(function(d){return d;}).style("opacity",0)
+                        .transition().duration(300).delay(1450).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 1000 372 L "+xScale(new Date("2021-10-21"))+" "+yScale_right(6814)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(1450).style("opacity",1)
+                        .style("pointer-events","none");  
+                    d3.select("#c8").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Death (7-Day-Avg): 6,814");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c8_2").attr("cx",xScale(new Date("2021-10-21")))
+                        .attr("cy",yScale_left(415486)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(1450).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 1000 372 L "+xScale(new Date("2021-10-21"))+" "+yScale_left(415486)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(1450).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c8_2").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Cases (7-Day-Avg): 415,486");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c9").attr("cx",xScale(new Date("2021-11-26")))
+                        .attr("cy",yScale_right(7048)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(1650).style("opacity",1);
+                    annotation = "11-26-2021, World Health Organization classifies, a new variant (Omicron) as a variant of concern after it was, first reported by scientists in South Africa., The variant has several mutations in the spike protein, that concern scientists around the world"; 
+                    annotation_s = annotation.split(", ");
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("text").attr("x",1000).attr("y",100).selectAll("tspan").data(annotation_s).enter().append("tspan")
+                        .attr("x",1000).attr("dy","1em").text(function(d){return d;}).style("opacity",0)
+                        .transition().duration(300).delay(1650).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 1265 205 L "+xScale(new Date("2021-11-26"))+" "+yScale_right(7048)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(1650).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c9").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Death (7-Day-Avg): 7,048");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c9_2").attr("cx",xScale(new Date("2021-11-26")))
+                        .attr("cy",yScale_left(569119)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(1650).style("opacity",1);
+                    d3.select("#c9_2").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Cases (7-Day-Avg): 569,119");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+                }
+                else if (current_scene == 3){
+                    data = data.filter(d => d.Date >= new Date("2022-01-01"));
+                    xScale = d3.scaleTime().domain([new Date ("2022-01-01"), new Date ("2022-12-31")]).range([0,width-2*margin]);
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c10").attr("cx",xScale(new Date("2022-01-14")))
+                        .attr("cy",yScale_right(7251)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(25).style("opacity",1);
+                    annotation = "01-14-2022, WHO recommended two new drugs to treat COVID-19"
+                    annotation_s = annotation.split(", ");
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("text").attr("x",20).attr("y",400).selectAll("tspan").data(annotation_s).enter().append("tspan")
+                        .attr("x",20).attr("dy","1em").text(function(d){return d;}).style("opacity",0)
+                        .transition().duration(300).delay(250).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 50 435 L "+xScale(new Date("2022-01-14"))+" "+yScale_right(7251)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(250).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c10").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Death (7-Day-Avg): 7,251");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c10_2").attr("cx",xScale(new Date("2022-01-14")))
+                        .attr("cy",yScale_left(2910790)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(250).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 50 400 L "+xScale(new Date("2022-01-14"))+" "+yScale_left(2910790)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(250).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c10_2").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Cases (7-Day-Avg): 2,910,790");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+                        
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c11").attr("cx",xScale(new Date("2022-02-11")))
+                        .attr("cy",yScale_right(10810)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(350).style("opacity",1);
+                    annotation = "02-11-2022, WHO prequalified its first monoclonal antibody - tocilizumab - to treat COVID-19"
+                    annotation_s = annotation.split(", ");
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("text").attr("x",300).attr("y",150).selectAll("tspan").data(annotation_s).enter().append("tspan")
+                        .attr("x",300).attr("dy","1em").text(function(d){return d;}).style("opacity",0)
+                        .transition().duration(300).delay(750).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 295 175 L "+xScale(new Date("2022-02-11"))+" "+yScale_right(10810)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(750).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c11").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Death (7-Day-Avg): 10,810");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("circle").attr("id","c11_2").attr("cx",xScale(new Date("2022-02-11")))
+                        .attr("cy",yScale_left(2439593)).attr("r",10).attr("fill","orange").style("opacity",0)
+                        .transition().duration(300).delay(750).style("opacity",1);
+                    d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .append("path").attr("d","M 295 175 L "+xScale(new Date("2022-02-11"))+" "+yScale_left(2439593)+"").attr("stroke","black").attr("stroke-width",1)
+                        .style("opacity",0).transition().duration(300).delay(750).style("opacity",1)
+                        .style("pointer-events","none");
+                    d3.select("#c11_2").on("mouseover",function(){
+                        d3.select("#tooltip").style("opacity",1).style("left",(d3.event.pageX)+"px")
+                            .style("top",(d3.event.pageY)+"px").html("New Cases (7-Day-Avg): 2,439,593");})
+                        .on("mouseout",function(){d3.select("#tooltip").style("opacity",0)});
+                }
+                
+                yAxis_left = d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                        .call(d3.axisLeft(yScale_left)).style("pointer-events","none");
+                yAxis_right = d3.select("svg").append("g").attr("transform","translate("+(width-margin)+","+margin+")")
+                        .call(d3.axisRight(yScale_right)).style("pointer-events","none");        
+                xAxis = d3.select("svg").append("g").attr("transform","translate("+margin+","+(height-margin)+")")
+                        .call(d3.axisBottom(xScale).tickFormat(d3.timeFormat("%B %Y"))).style("pointer-events","none");
+
+                d3.select("svg").append("text").text("Date").attr("x", 0.5*(width-2*margin)).attr("y",750).attr("font-size","20px");
+                d3.select("svg").append("text").text("Number of New Cases (7-Day-Average)").attr("transform","rotate(-90)")
+                    .attr("x",-500).attr("y",14).attr("font-size","20px");
+                d3.select("svg").append("text").text("Number of New Deaths (7-Day-Average)").attr("transform","rotate(90)")
+                    .attr("x",200).attr("y",-1565).attr("font-size","20px");
+                d3.selectAll('.tick text').attr('font-size', '15px')
+
+                d3.select("svg").append("text").text("Number of New Cases").attr("x",1000).attr("y",100);
+                d3.select("svg").append("text").text("Number of New Deaths").attr("x",1000).attr("y",130);
+                d3.select("svg").append("rect").attr("width",50).attr("height",2).attr("x",1170).attr("y",95).attr("fill","green");
+                d3.select("svg").append("rect").attr("width",50).attr("height",2).attr("x",1170).attr("y",125).attr("fill","red");
+
+                var line_1 = d3.line().x(d => xScale(d.Date)).y(d => yScale_left(d.New_Cases_Smooth));
+                d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                    .append("path").datum(data).attr("d",line_1).attr("fill", "none").attr("stroke", "green").style("pointer-events","none")
+                    .style("stroke-width",2)
+                    .style("stroke-dasharray",function(){
+                        return d3.select(this).node().getTotalLength()
+                    })
+                    .style("stroke-dashoffset",function(){
+                        return d3.select(this).node().getTotalLength()
+                    }).transition().duration(2000).ease(d3.easeLinear).style("stroke-dashoffset",0);
+
+                var line_2 = d3.line().x(d => xScale(d.Date)).y(d => yScale_right(d.New_Death_Smooth));
+                d3.select("svg").append("g").attr("transform","translate("+margin+","+margin+")")
+                .append("path").datum(data).attr("d",line_2).attr("fill", "none").attr("stroke", "red").style("pointer-events","none")
+                .style("stroke-width",2)
+                .style("stroke-dasharray",function(){
+                    return d3.select(this).node().getTotalLength()
+                })
+                .style("stroke-dashoffset",function(){
+                    return d3.select(this).node().getTotalLength()
+                }).transition().duration(2000).ease(d3.easeLinear).style("stroke-dashoffset",0);
+            })
+        }
+
+        async function loadScene(scene_num){
+            if (scene_num == 1){
+                if (current_scene != 1){
+                    d3.select("#b"+current_scene).style("background-color","grey").style("border-color","grey");
+                    current_scene = 1;
+                    d3.select("#b1").style("background-color", "mediumseagreen").style("border-color","mediumseagreen");
+                    d3.select("svg").remove();
+                    d3.select("body").append("svg").attr("width",1600).attr("height",900);
+                    main_chart();
+                }
+            }
+            else if (scene_num == 2){
+                if (current_scene != 2){
+                    d3.select("#b"+current_scene).style("background-color","grey").style("border-color","grey");
+                    current_scene = 2;
+                    d3.select("#b2").style("background-color", "mediumseagreen").style("border-color","mediumseagreen");
+                    d3.select("svg").remove();
+                    d3.select("body").append("svg").attr("width",1600).attr("height",900);
+                    main_chart();
+                }
+            }
+            else if (scene_num == 3){
+                if (current_scene != 3){
+                    d3.select("#b"+current_scene).style("background-color","grey").style("border-color","grey");
+                    current_scene = 3;
+                    d3.select("#b3").style("background-color", "mediumseagreen").style("border-color","mediumseagreen");
+                    d3.select("svg").remove();
+                    d3.select("body").append("svg").attr("width",1600).attr("height",900);
+                    main_chart();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
